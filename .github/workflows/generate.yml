@@ -83,8 +83,8 @@ jobs:
                     --layer=sports \
                     --minimum-zoom=3 \
                     --maximum-zoom=16 \
-                    --cluster-distance=60 \
                     --no-tile-size-limit \
+                    --no-feature-limit \
                     --force \
                     sports-normalized.geojson
                   rm sports-normalized.geojson
