@@ -1,0 +1,12 @@
+{
+  "name": "sport-around-data",
+  "version": "1.0.0",
+  "description": "Pipeline OSM → PMTiles pour sport-around",
+  "private": true,
+  "scripts": {
+    "generate": "node scripts/normalize.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,99 @@
+name: Generate Sports PMTiles
+
+on:
+    schedule:
+        - cron: "0 3 * * 0" # Tous les dimanches à 3h UTC
+    workflow_dispatch: # Déclenchement manuel possible
+
+jobs:
+    generate:
+        runs-on: ubuntu-latest
+        timeout-minutes: 120
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Install osmium-tool
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -y osmium-tool
+                  osmium --version
+
+            - name: Install tippecanoe (from source)
+              run: |
+                  sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev
+                  curl -sL https://github.com/felt/tippecanoe/archive/refs/tags/2.79.0.tar.gz | tar xz
+                  cd tippecanoe-2.79.0
+                  make -j$(nproc)
+                  sudo make install
+                  cd ..
+                  rm -rf tippecanoe-2.79.0
+                  tippecanoe --version
+
+            - name: Download France PBF
+              run: |
+                  curl -L --progress-bar \
+                    https://download.geofabrik.de/europe/france-latest.osm.pbf \
+                    -o france-latest.osm.pbf
+                  du -sh france-latest.osm.pbf
+
+            - name: Filter sports POIs
+              run: |
+                  osmium tags-filter france-latest.osm.pbf \
+                    n/leisure=pitch   w/leisure=pitch   \
+                    n/leisure=track   w/leisure=track   \
+                    n/amenity=drinking_water             \
+                    n/amenity=fountain                   \
+                    n/amenity=toilets                    \
+                    n/tourism=picnic_site  w/tourism=picnic_site  \
+                    n/leisure=picnic_table w/leisure=picnic_table \
+                    n/tourism=viewpoint                  \
+                    n/tourism=alpine_hut    w/tourism=alpine_hut    \
+                    n/tourism=wilderness_hut w/tourism=wilderness_hut \
+                    n/sport=climbing w/sport=climbing r/sport=climbing \
+                    r/route=via_ferrata                  \
+                    -o sports-filtered.osm.pbf --overwrite
+                  rm france-latest.osm.pbf
+                  du -sh sports-filtered.osm.pbf
+
+            - name: Export to GeoJSON
+              run: |
+                  osmium export sports-filtered.osm.pbf -o sports-raw.geojson --overwrite
+                  rm sports-filtered.osm.pbf
+                  du -sh sports-raw.geojson
+
+            - name: Normalize features
+              run: |
+                  node scripts/normalize.mjs sports-raw.geojson sports-normalized.geojson
+                  rm sports-raw.geojson
+                  du -sh sports-normalized.geojson
+
+            - name: Generate PMTiles
+              run: |
+                  tippecanoe \
+                    --output=sports-france.pmtiles \
+                    --layer=sports \
+                    --minimum-zoom=3 \
+                    --maximum-zoom=16 \
+                    --cluster-distance=60 \
+                    --no-tile-size-limit \
+                    --force \
+                    sports-normalized.geojson
+                  rm sports-normalized.geojson
+                  du -sh sports-france.pmtiles
+
+            - name: Publish to GitHub Releases
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  gh release view data-latest 2>/dev/null || \
+                    gh release create data-latest \
+                      --title "Sports France PMTiles" \
+                      --notes "Données OSM sports/outdoor pour la France, générées automatiquement chaque semaine."
+                  gh release upload data-latest sports-france.pmtiles --clobber
