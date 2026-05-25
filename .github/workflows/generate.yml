@@ -81,8 +81,9 @@ jobs:
                   tippecanoe \
                     --output=sports-france.pmtiles \
                     --layer=sports \
-                    --minimum-zoom=3 \
+                    --minimum-zoom=12 \
                     --maximum-zoom=16 \
+                    -r 1 \
                     --no-tile-size-limit \
                     --no-feature-limit \
                     --force \
