@@ -66,7 +66,7 @@ jobs:
 
             - name: Export to GeoJSON
               run: |
-                  osmium export sports-filtered.osm.pbf -o sports-raw.geojson --add-unique-id=type --overwrite
+                  osmium export sports-filtered.osm.pbf -o sports-raw.geojson --add-unique-id=type_id --overwrite
                   rm sports-filtered.osm.pbf
                   du -sh sports-raw.geojson
 
