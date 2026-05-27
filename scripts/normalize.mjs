@@ -9,6 +9,14 @@
  */
 
 import { createReadStream, createWriteStream } from "node:fs";
+
+function parseOsmId(rawId) {
+    if (!rawId) return {};
+    const match = String(rawId).match(/^([nwr])(\d+)$/);
+    if (!match) return {};
+    const typeMap = { n: 'node', w: 'way', r: 'relation' };
+    return { osm_id: parseInt(match[2], 10), osm_type: typeMap[match[1]] };
+}
 import { createInterface } from "node:readline";
 import { argv, exit } from "node:process";
 
@@ -183,6 +191,7 @@ async function main() {
             properties: {
                 sport_around_type: sportType,
                 ...(props.name ? { name: props.name } : {}),
+                ...parseOsmId(props['@id']),
             },
         };
 
