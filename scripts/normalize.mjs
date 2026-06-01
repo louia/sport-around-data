@@ -58,6 +58,10 @@ const MATCHERS = [
         type: "city_stade",
     },
     {
+        match: (p) => p.leisure === "pitch" && p.sport === "tennis",
+        type: "tennis",
+    },
+    {
         match: (p) => p.leisure === "track" && p.cycling === "pump_track",
         type: "pumptrack",
     },
